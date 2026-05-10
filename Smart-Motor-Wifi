@@ -1,0 +1,93 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+// WiFi
+const char* ssid = "";
+const char* password = "";
+
+// L298N
+#define ENA 14
+#define IN1 27
+#define IN2 26
+
+WebServer server(80);
+
+void setup() {
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  apagarMotor();
+
+  Serial.begin(115200);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando");
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi conectado");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", paginaPrincipal);
+  server.on("/on", encender);
+  server.on("/off", apagar);
+
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}
+
+// ===== PAGINA WEB =====
+void paginaPrincipal() {
+  String html = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Control de Motor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    button { font-size: 30px; padding: 20px; margin: 10px; width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Motor ESP32</h1>
+  <a href="/on"><button>ENCENDER</button></a><br>
+  <a href="/off"><button>APAGAR</button></a>
+</body>
+</html>
+)rawliteral";
+
+  server.send(200, "text/html", html);
+}
+
+// ===== ACCIONES =====
+void encender() {
+  encenderMotor();
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+void apagar() {
+  apagarMotor();
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+// ===== MOTOR =====
+void encenderMotor() {
+  digitalWrite(ENA, HIGH);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+}
+
+void apagarMotor() {
+  digitalWrite(ENA, LOW);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+}
