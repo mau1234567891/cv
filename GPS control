@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Mini Uber PRO (Prudente)</title>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet/dist/leaflet.css"
+/>
+
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+  }
+  #map {
+    height: 100%;
+  }
+  .panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    padding: 12px 15px;
+    border-radius: 14px;
+    box-shadow: 0 5px 15px rgba(0,0,0,.3);
+    z-index: 1000;
+    font-size: 14px;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+  <b>Mini Uber PRO</b><br>
+  Autos activos: <span id="contador">0</span><br>
+  Servidor: <small id="server"></small>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+/* ======================
+   CONFIGURACIÓN
+====================== */
+const SERVER_URL = "http://192.168.1.105:8000";
+document.getElementById("server").innerText = SERVER_URL;
+
+/* ======================
+   MAPA
+====================== */
+const map = L.map("map").setView([13.6929, -89.2182], 15);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap"
+}).addTo(map);
+
+/* ======================
+   LÍMITES (GEOFENCE)
+====================== */
+const limites = {
+  latMin: 13.65,
+  latMax: 13.72,
+  lngMin: -89.25,
+  lngMax: -89.18
+};
+
+L.rectangle([
+  [limites.latMin, limites.lngMin],
+  [limites.latMax, limites.lngMax]
+], {
+  color: "red",
+  weight: 2,
+  dashArray: "5,5"
+}).addTo(map);
+
+function dentroLimites(lat, lng) {
+  return (
+    lat >= limites.latMin &&
+    lat <= limites.latMax &&
+    lng >= limites.lngMin &&
+    lng <= limites.lngMax
+  );
+}
+
+/* ======================
+   AUTOS
+====================== */
+const autos = {};
+const posiciones = {
+  auto1: [13.6929, -89.2182],
+  auto2: [13.6940, -89.2170],
+  auto3: [13.6915, -89.2190]
+};
+
+function actualizarAuto(id, lat, lng) {
+  if (!autos[id]) {
+    autos[id] = L.marker([lat, lng])
+      .addTo(map)
+      .bindPopup(id);
+  } else {
+    autos[id].setLatLng([lat, lng]);
+  }
+
+  document.getElementById("contador").innerText =
+    Object.keys(autos).length;
+}
+
+/* ======================
+   MOVIMIENTO CONTROLADO
+====================== */
+const VELOCIDAD_MAX = 0.0003;
+
+function moverAutos() {
+  for (let id in posiciones) {
+
+    let nuevaLat = posiciones[id][0] + (Math.random() - 0.5) * VELOCIDAD_MAX;
+    let nuevaLng = posiciones[id][1] + (Math.random() - 0.5) * VELOCIDAD_MAX;
+
+    if (dentroLimites(nuevaLat, nuevaLng)) {
+      posiciones[id][0] = nuevaLat;
+      posiciones[id][1] = nuevaLng;
+    }
+
+    actualizarAuto(id, posiciones[id][0], posiciones[id][1]);
+  }
+}
+
+setInterval(moverAutos, 800);
+</script>
+
+</body>
+</html>
