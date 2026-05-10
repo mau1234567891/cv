@@ -6,8 +6,8 @@
 #include "time.h"
 
 // ===== WIFI =====
-const char* ssid = "Fer 1";
-const char* password = "19961997";
+const char* ssid = "";
+const char* password = "";
 
 // ===== NTP =====
 const char* ntpServer = "pool.ntp.org";
