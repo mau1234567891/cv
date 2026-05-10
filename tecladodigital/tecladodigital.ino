@@ -1,0 +1,124 @@
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+#include <XPT2046_Touchscreen.h>
+
+// ===== TFT =====
+#define TFT_CS 5
+#define TFT_DC 2
+#define TFT_RST 4
+
+// ===== TOUCH =====
+#define TOUCH_CS 15
+
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
+XPT2046_Touchscreen ts(TOUCH_CS);
+
+// ===== MOSTRAR TEXTO =====
+void mostrarTexto(String texto) {
+  tft.fillRect(0, 0, 320, 30, ILI9341_BLACK);
+  tft.setCursor(10, 5);
+  tft.setTextColor(ILI9341_YELLOW);
+  tft.setTextSize(2);
+  tft.print(texto);
+}
+
+// ===== DIBUJAR BOTON =====
+void dibujarBoton(int x, int y, String texto) {
+  tft.fillRect(x, y, 80, 50, ILI9341_BLUE);
+  tft.drawRect(x, y, 80, 50, ILI9341_WHITE);
+  tft.setCursor(x + 30, y + 15);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setTextSize(2);
+  tft.print(texto);
+}
+
+// ===== DIBUJAR TECLADO =====
+void dibujarTeclado() {
+  int x = 20, y = 40;
+
+  // Fila 1
+  dibujarBoton(x, y, "1");
+  dibujarBoton(x + 100, y, "2");
+  dibujarBoton(x + 200, y, "3");
+
+  // Fila 2
+  dibujarBoton(x, y + 60, "4");
+  dibujarBoton(x + 100, y + 60, "5");
+  dibujarBoton(x + 200, y + 60, "6");
+
+  // Fila 3
+  dibujarBoton(x, y + 120, "7");
+  dibujarBoton(x + 100, y + 120, "8");
+  dibujarBoton(x + 200, y + 120, "9");
+
+  // Fila 4 (solo 0 centrado)
+  dibujarBoton(x + 100, y + 180, "0");
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  tft.begin();
+  tft.setRotation(1);
+  tft.fillScreen(ILI9341_BLACK);
+
+  ts.begin();
+  ts.setRotation(2);
+
+  dibujarTeclado();
+}
+
+bool yaPresionado = false;
+void loop() {
+
+  if (ts.touched() && !yaPresionado) {
+
+    TS_Point p1, p2;
+
+    // Leer 2 veces para confirmar estabilidad
+    p1 = ts.getPoint();
+    delay(30);
+    p2 = ts.getPoint();
+
+    // Si la diferencia es muy grande, ignorar (ruido)
+    if (abs(p1.x - p2.x) > 50 || abs(p1.y - p2.y) > 50) {
+      return;
+    }
+
+    int touchX = map(p1.x, 200, 3800, 0, 320);
+    int touchY = map(p1.y, 200, 3800, 0, 240);
+
+    int baseX = 20, baseY = 40;
+
+    for (int fila = 0; fila < 4; fila++) {
+      for (int col = 0; col < 3; col++) {
+
+        int bx = baseX + col * 100;
+        int by = baseY + fila * 60;
+
+        if (fila == 3 && col != 1) continue;
+
+        if (touchX > bx && touchX < bx + 80 &&
+            touchY > by && touchY < by + 50) {
+
+          int numero;
+
+          if (fila == 3) numero = 0;
+          else numero = fila * 3 + col + 1;
+
+          Serial.println(numero);
+          mostrarTexto("Presionaste: " + String(numero));
+
+          yaPresionado = true; // 🔒 bloquear
+        }
+      }
+    }
+  }
+
+  // 🔓 cuando suelta el dedo
+  if (!ts.touched()) {
+    yaPresionado = false;
+  }
+}
+
